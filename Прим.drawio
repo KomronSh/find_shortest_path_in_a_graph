@@ -1,0 +1,73 @@
+<mxfile host="app.diagrams.net">
+  <diagram name="Страница-1" id="m5K9V3pDJBn3NCefQmAn">
+    <mxGraphModel dx="2258" dy="1458" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="WAM2NsaNsZpW6RJ6FzZK-2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=50;              fillColor=#ffffff;strokeColor=#000000;              strokeWidth=2;fontStyle=1;" value="Начало алгоритма" vertex="1">
+          <mxGeometry height="70" width="240" x="465" y="450" as="geometry" />
+        </mxCell>
+        <mxCell id="WAM2NsaNsZpW6RJ6FzZK-3" parent="1" style="rounded=0;whiteSpace=wrap;html=1;              fillColor=#ffffff;strokeColor=#000000;strokeWidth=2;" value="Просмотр 1-й строки матрицы D, выбор минимального элемента (столбец g)" vertex="1">
+          <mxGeometry height="70" width="240" x="465" y="560" as="geometry" />
+        </mxCell>
+        <mxCell id="WAM2NsaNsZpW6RJ6FzZK-4" parent="1" style="rounded=0;whiteSpace=wrap;html=1;              fillColor=#ffffff;strokeColor=#000000;strokeWidth=2;" value="Исключить столбцы 1 и g. Построить ребро (1, g)" vertex="1">
+          <mxGeometry height="70" width="240" x="465" y="690" as="geometry" />
+        </mxCell>
+        <mxCell id="WAM2NsaNsZpW6RJ6FzZK-5" parent="1" style="strokeWidth=2;html=1;shape=mxgraph.flowchart.loop_limit;              whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;fontStyle=1;" value="Внешний цикл: не все строки включены" vertex="1">
+          <mxGeometry height="70" width="240" x="465" y="820" as="geometry" />
+        </mxCell>
+        <mxCell id="WAM2NsaNsZpW6RJ6FzZK-6" parent="1" style="strokeWidth=2;html=1;shape=mxgraph.flowchart.loop_limit;              whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;fontStyle=1;" value="Внутренний цикл: поиск допустимого минимума" vertex="1">
+          <mxGeometry height="70" width="240" x="465" y="940" as="geometry" />
+        </mxCell>
+        <mxCell id="WAM2NsaNsZpW6RJ6FzZK-7" parent="1" style="rounded=0;whiteSpace=wrap;html=1;              fillColor=#ffffff;strokeColor=#000000;strokeWidth=2;" value="Просмотр текущих строк (1-я и g-я и др.). Выбор минимального элемента (вершины g и r)" vertex="1">
+          <mxGeometry height="70" width="240" x="465" y="1060" as="geometry" />
+        </mxCell>
+        <mxCell id="WAM2NsaNsZpW6RJ6FzZK-8" parent="1" style="rounded=0;whiteSpace=wrap;html=1;              fillColor=#ffffff;strokeColor=#000000;strokeWidth=2;" value="Проверка: степень вершин g и r ≤ ограничению" vertex="1">
+          <mxGeometry height="70" width="240" x="465" y="1200" as="geometry" />
+        </mxCell>
+        <mxCell id="WAM2NsaNsZpW6RJ6FzZK-9" parent="1" style="strokeWidth=2;html=1;shape=mxgraph.flowchart.loop_limit;              whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;              flipV=1;fontStyle=1;flipV=1;legacyAnchorPoints=0;" value="" vertex="1">
+          <mxGeometry height="70" width="240" x="465" y="1330" as="geometry" />
+        </mxCell>
+        <mxCell id="WAM2NsaNsZpW6RJ6FzZK-10" parent="1" style="rounded=0;whiteSpace=wrap;html=1;              fillColor=#ffffff;strokeColor=#000000;strokeWidth=2;" value="Включить ребро (g, r) в дерево. Вычеркнуть r-й столбец. Добавить r-ю строку к просматриваемым." vertex="1">
+          <mxGeometry height="70" width="240" x="465" y="1460" as="geometry" />
+        </mxCell>
+        <mxCell id="WAM2NsaNsZpW6RJ6FzZK-11" parent="1" style="strokeWidth=2;html=1;shape=mxgraph.flowchart.loop_limit;              whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;              flipV=1;fontStyle=1;flipH=1;legacyAnchorPoints=0;flipV=1;" value="" vertex="1">
+          <mxGeometry height="70" width="240" x="465" y="1610" as="geometry" />
+        </mxCell>
+        <mxCell id="WAM2NsaNsZpW6RJ6FzZK-12" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=50;              fillColor=#ffffff;strokeColor=#000000;              strokeWidth=2;fontStyle=1;" value="Конец алгоритма" vertex="1">
+          <mxGeometry height="70" width="240" x="465" y="1750" as="geometry" />
+        </mxCell>
+        <mxCell id="WAM2NsaNsZpW6RJ6FzZK-13" edge="1" parent="1" source="WAM2NsaNsZpW6RJ6FzZK-2" target="WAM2NsaNsZpW6RJ6FzZK-3">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="WAM2NsaNsZpW6RJ6FzZK-14" edge="1" parent="1" source="WAM2NsaNsZpW6RJ6FzZK-3" target="WAM2NsaNsZpW6RJ6FzZK-4">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="WAM2NsaNsZpW6RJ6FzZK-15" edge="1" parent="1" source="WAM2NsaNsZpW6RJ6FzZK-4" target="WAM2NsaNsZpW6RJ6FzZK-5">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="WAM2NsaNsZpW6RJ6FzZK-16" edge="1" parent="1" source="WAM2NsaNsZpW6RJ6FzZK-5" target="WAM2NsaNsZpW6RJ6FzZK-6">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="WAM2NsaNsZpW6RJ6FzZK-17" edge="1" parent="1" source="WAM2NsaNsZpW6RJ6FzZK-6" target="WAM2NsaNsZpW6RJ6FzZK-7">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="WAM2NsaNsZpW6RJ6FzZK-18" edge="1" parent="1" source="WAM2NsaNsZpW6RJ6FzZK-7" target="WAM2NsaNsZpW6RJ6FzZK-8">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="WAM2NsaNsZpW6RJ6FzZK-19" edge="1" parent="1" source="WAM2NsaNsZpW6RJ6FzZK-8" target="WAM2NsaNsZpW6RJ6FzZK-9">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="WAM2NsaNsZpW6RJ6FzZK-20" edge="1" parent="1" source="WAM2NsaNsZpW6RJ6FzZK-9" target="WAM2NsaNsZpW6RJ6FzZK-10" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="WAM2NsaNsZpW6RJ6FzZK-21" edge="1" parent="1" source="WAM2NsaNsZpW6RJ6FzZK-10" target="WAM2NsaNsZpW6RJ6FzZK-11">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="WAM2NsaNsZpW6RJ6FzZK-22" edge="1" parent="1" source="WAM2NsaNsZpW6RJ6FzZK-11" target="WAM2NsaNsZpW6RJ6FzZK-12" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
