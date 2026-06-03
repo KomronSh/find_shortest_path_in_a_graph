@@ -3,6 +3,9 @@
 
 #include "framework.h"
 #include "graph.h"
+#include <string>
+#include <sstream>
+#include <cwctype>
 
 #define MAX_LOADSTRING 100
 
@@ -11,11 +14,18 @@ HINSTANCE hInst;                                // текущий экземпл
 WCHAR szTitle[MAX_LOADSTRING];                  // Текст строки заголовка
 WCHAR szWindowClass[MAX_LOADSTRING];            // имя класса главного окна
 
+std::vector <std::vector<int>> coordinates{
+    {0, 3, 3, 8, 6, 10, 16, 16, 16, 23, 24, 24},
+    {1, 1, 7, 19, 22, 22, 7, 1, 9, 19, 2, 16} 
+};
+Graph graph(coordinates);
+
 // Отправить объявления функций, включенных в этот модуль кода:
 ATOM                MyRegisterClass(HINSTANCE hInstance);
 BOOL                InitInstance(HINSTANCE, int);
 LRESULT CALLBACK    WndProc(HWND, UINT, WPARAM, LPARAM);
 INT_PTR CALLBACK    About(HWND, UINT, WPARAM, LPARAM);
+INT_PTR CALLBACK    EnterCoordinates(HWND, UINT, WPARAM, LPARAM);
 
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
                      _In_opt_ HINSTANCE hPrevInstance,
@@ -97,8 +107,9 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 {
    hInst = hInstance; // Сохранить маркер экземпляра в глобальной переменной
 
-   HWND hWnd = CreateWindowW(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW,
-      CW_USEDEFAULT, 0, CW_USEDEFAULT, 0, nullptr, nullptr, hInstance, nullptr);
+   HWND hWnd = CreateWindowW(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW, 
+       CW_USEDEFAULT, 0, 
+       1000, 800, nullptr, nullptr, hInstance, nullptr);
 
    if (!hWnd)
    {
@@ -107,6 +118,11 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 
    ShowWindow(hWnd, nCmdShow);
    UpdateWindow(hWnd);
+
+   // Build vertex and tree data once at initialization. Rebuild will
+   // also occur on WM_SIZE so we don't need to recreate them every paint.
+   graph.FormMatrix();
+   graph.BuildTreeEdgesPrim();
 
    return TRUE;
 }
@@ -131,8 +147,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             // Разобрать выбор в меню:
             switch (wmId)
             {
-            case IDM_ABOUT:
-                DialogBox(hInst, MAKEINTRESOURCE(IDD_ABOUTBOX), hWnd, About);
+            case IDM_ENTER_COORDINATES:
+                DialogBox(hInst, MAKEINTRESOURCE(IDD_ENTER_COORDINATES), hWnd, EnterCoordinates);
                 break;
             case IDM_EXIT:
                 DestroyWindow(hWnd);
@@ -142,11 +158,64 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             }
         }
         break;
+    case WM_SIZE:
+    {
+        graph.FormMatrix();
+        graph.BuildTreeEdgesPrim();
+        InvalidateRect(hWnd, nullptr, TRUE);
+    }
+    break;
     case WM_PAINT:
         {
             PAINTSTRUCT ps;
-            BeginPaint(hWnd, &ps);
-            // TODO: Добавьте сюда любой код рисования...
+            HDC hdc = BeginPaint(hWnd, &ps);
+
+            RECT client_rect;
+            GetClientRect(hWnd, &client_rect);
+            int clientHeight = client_rect.bottom - client_rect.top;
+
+            HBRUSH brush_black = CreateSolidBrush(RGB(0, 0, 0));
+            HBRUSH brush_old = (HBRUSH)SelectObject(hdc, brush_black);
+
+            float scale{ 30 };
+            int scale_int{ static_cast<int>(scale) };
+            float radius{ 4 * (scale / 15) };
+
+            auto tree_edges{ graph.GetTree() };
+
+            for (const auto& edge : tree_edges) {
+                int x1 = edge.first_.x_ * scale_int + 10;
+                int y1 = -edge.first_.y_ * scale_int + clientHeight - 10;
+                int x2 = edge.second_.x_ * scale_int + 10;
+                int y2 = -edge.second_.y_ * scale_int + clientHeight - 10;
+
+                MoveToEx(hdc, x1, y1, nullptr);
+                SelectObject(hdc, brush_black);
+                Ellipse(hdc, x1 - radius,
+                    y1 - radius,
+                    x1 + radius,
+                    y1 + radius);
+                SelectObject(hdc, brush_old);
+                LineTo(hdc, x2, y2);
+                SelectObject(hdc, brush_black);
+                Ellipse(hdc, x2 - radius, y2 - radius, x2 + radius, y2 + radius);
+                SelectObject(hdc, brush_old);
+            }
+
+            if (!tree_edges.empty()) {
+                size_t tree_size = tree_edges.size() - 1;
+                int x = tree_edges[tree_size].second_.x_ * scale_int + 10;
+                int y =
+                    -tree_edges[tree_size].second_.y_ * scale_int + clientHeight - 10;
+
+                SelectObject(hdc, brush_black);
+                Ellipse(hdc, x - radius,
+                    y - radius,
+                    x + radius,
+                    y + radius);
+            }
+
+            DeleteObject(brush_black);
             EndPaint(hWnd, &ps);
         }
         break;
@@ -157,6 +226,97 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         return DefWindowProc(hWnd, message, wParam, lParam);
     }
     return 0;
+}
+
+// Обработчик окна ввода координат.
+static bool ParseTwoColumnCoordinates(const std::wstring& text, std::vector<std::vector<int>>& out)
+{
+    std::wistringstream sin(text);
+    std::wstring line;
+    std::vector<int> xs, ys;
+
+    while (std::getline(sin, line)) {
+        // Trim line
+        size_t start = 0;
+        while (start < line.size() && iswspace(line[start])) ++start;
+        size_t end = line.size();
+        while (end > start && iswspace(line[end-1])) --end;
+        if (start >= end) continue;
+
+        std::wstring trimmed = line.substr(start, end - start);
+        std::wistringstream ls(trimmed);
+        int x, y;
+        if (ls >> x >> y) {
+            xs.push_back(x);
+            ys.push_back(y);
+        }
+        else {
+            // try parse comma or semicolon separated
+            // replace commas and semicolons with spaces and try again
+            for (auto& ch : trimmed) if (ch == L',' || ch == L';' || ch == L'\t') ch = L' ';
+            std::wistringstream ls2(trimmed);
+            if (ls2 >> x >> y) { xs.push_back(x); ys.push_back(y); }
+        }
+    }
+
+    if (xs.empty()) return false;
+    out.clear(); out.resize(2);
+    out[0] = xs; out[1] = ys;
+    return true;
+}
+
+INT_PTR CALLBACK EnterCoordinates(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
+{
+    UNREFERENCED_PARAMETER(lParam);
+    switch (message)
+    {
+    case WM_INITDIALOG:
+    {
+        std::wstring text;
+        if (!coordinates.empty() && coordinates[0].size() == coordinates[1].size()) {
+            for (size_t i = 0; i < coordinates[0].size(); ++i) {
+                if (i > 0) text += L"\r\n";
+                text += std::to_wstring(coordinates[0][i]);
+                text += L"\t";
+                text += std::to_wstring(coordinates[1][i]);
+            }
+        }
+        SetDlgItemTextW(hDlg, IDC_EDIT_COORDINATES, text.c_str());
+        return (INT_PTR)TRUE;
+    }
+
+    case WM_COMMAND:
+        if (LOWORD(wParam) == IDOK)
+        {
+            int len = GetWindowTextLengthW(GetDlgItem(hDlg, IDC_EDIT_COORDINATES));
+            std::wstring buf;
+            buf.resize(len + 1);
+            GetDlgItemTextW(hDlg, IDC_EDIT_COORDINATES, &buf[0], len + 1);
+
+            // Parse two-column input: each line "x y" (tab/space separated)
+            std::vector<std::vector<int>> new_coords;
+            if (ParseTwoColumnCoordinates(buf, new_coords)) {
+                coordinates = new_coords;
+                graph = Graph(coordinates);
+                graph.FormMatrix();
+                graph.BuildTreeEdgesPrim();
+
+                HWND parent = GetParent(hDlg);
+                if (!parent) parent = GetWindow(hDlg, GW_OWNER);
+                if (parent) InvalidateRect(parent, nullptr, TRUE);
+            }
+
+            EndDialog(hDlg, LOWORD(wParam));
+            return (INT_PTR)TRUE;
+        }
+        else if (LOWORD(wParam) == IDCANCEL)
+        {
+            EndDialog(hDlg, LOWORD(wParam));
+            return (INT_PTR)TRUE;
+        }
+        break;
+    }
+    return (INT_PTR)FALSE;
 }
 
 // Обработчик сообщений для окна "О программе".
