@@ -6,6 +6,7 @@
 #include <string>
 #include <sstream>
 #include <cwctype>
+#include <windowsx.h>
 
 #define MAX_LOADSTRING 100
 
@@ -263,6 +264,38 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             EndPaint(hWnd, &ps);
         }
         break;
+    case WM_LBUTTONDOWN:
+    {
+        int mouse_x = GET_X_LPARAM(lParam);
+        int mouse_y = GET_Y_LPARAM(lParam);
+
+        RECT client_rect;
+        GetClientRect(hWnd, &client_rect);
+        int clientHeight = client_rect.bottom - client_rect.top;
+
+        float scale = 30.0f;
+        int scale_int = static_cast<int>(scale);
+        float radius = 4 * (scale / 15);
+
+        auto vertices = graph.GetVertices();
+        for (size_t i = 0; i < vertices.size(); ++i) {
+            int x = vertices[i].x_ * scale_int + 10;
+            int y = -vertices[i].y_ * scale_int + clientHeight - 10;
+
+            float dist = std::sqrt(std::pow(mouse_x - x, 2) + std::pow(mouse_y - y, 2));
+            if (dist <= radius + 5) {
+                if (GetAsyncKeyState(VK_SHIFT) & 0x8000) {
+                    graph.SetEndVertex(i);
+                } else {
+                    graph.SetStartVertex(i);
+                }
+                graph.BuildTreeEdgesPrim();
+                InvalidateRect(hWnd, nullptr, TRUE);
+                break;
+            }
+        }
+    }
+    break;
     case WM_DESTROY:
         PostQuitMessage(0);
         break;
