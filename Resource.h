@@ -16,6 +16,11 @@
 #define IDC_MYICON				2
 #define IDD_ENTER_COORDINATES	110
 #define IDC_EDIT_COORDINATES	1000
+#define IDM_MODE_ADD_VERTEX     111
+#define IDM_MODE_SELECT_START   112
+#define IDM_MODE_SELECT_END     113
+#define IDM_BUILD_PATH          114
+#define IDM_CLEAR_GRAPH         115
 #ifndef IDC_STATIC
 #define IDC_STATIC				-1
 #endif

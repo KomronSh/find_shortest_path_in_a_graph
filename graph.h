@@ -23,6 +23,13 @@ struct Edge {
 class Graph {
 public:
     Graph(std::vector<std::vector<int>> input) {
+        start_vertex_ = 0;
+        end_vertex_ = 0;
+        if (input.size() < 2 || input[0].empty() ||
+            input[0].size() != input[1].size()) {
+            return;
+        }
+
         size_t size{ input[0].size() };
 
         for (size_t i{ 0 }; i < size; ++i) {
@@ -37,6 +44,9 @@ public:
         end_vertex_ = size > 0 ? size - 1 : 0;
     }
     void FormMatrix() {
+        size_t size = vertex_array_.size();
+        distance_matrix_.assign(size, std::vector<float>(size, 0));
+
         int i{ -1 };
         int j{ -1 };
         for (Vertex a : vertex_array_) {

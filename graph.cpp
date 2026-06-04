@@ -21,12 +21,53 @@ std::vector <std::vector<int>> coordinates{
 };
 Graph graph(coordinates);
 
+enum class MouseMode {
+    AddVertex,
+    SelectStart,
+    SelectEnd
+};
+
+MouseMode mouse_mode = MouseMode::AddVertex;
+std::wstring status_text = L"Режим: добавление вершины";
+
 // Отправить объявления функций, включенных в этот модуль кода:
 ATOM                MyRegisterClass(HINSTANCE hInstance);
 BOOL                InitInstance(HINSTANCE, int);
 LRESULT CALLBACK    WndProc(HWND, UINT, WPARAM, LPARAM);
 INT_PTR CALLBACK    About(HWND, UINT, WPARAM, LPARAM);
 INT_PTR CALLBACK    EnterCoordinates(HWND, UINT, WPARAM, LPARAM);
+
+void RebuildGraph()
+{
+    graph = Graph(coordinates);
+    graph.FormMatrix();
+    graph.BuildTreeEdgesPrim();
+}
+
+void RebuildPath()
+{
+    graph.FormMatrix();
+    graph.BuildTreeEdgesPrim();
+}
+
+int FindVertexByMouse(int mouse_x, int mouse_y, int client_height)
+{
+    float scale = 30.0f;
+    int scale_int = static_cast<int>(scale);
+    float radius = 4 * (scale / 15);
+    auto vertices = graph.GetVertices();
+
+    for (size_t i = 0; i < vertices.size(); ++i) {
+        int x = vertices[i].x_ * scale_int + 10;
+        int y = -vertices[i].y_ * scale_int + client_height - 10;
+        float dist = std::sqrt(std::pow(mouse_x - x, 2) + std::pow(mouse_y - y, 2));
+        if (dist <= radius + 8) {
+            return static_cast<int>(i);
+        }
+    }
+
+    return -1;
+}
 
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
                      _In_opt_ HINSTANCE hPrevInstance,
@@ -120,8 +161,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
    ShowWindow(hWnd, nCmdShow);
    UpdateWindow(hWnd);
 
-   graph.FormMatrix();
-   graph.BuildTreeEdgesPrim();
+   RebuildPath();
 
    return TRUE;
 }
@@ -149,6 +189,33 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             case IDM_ENTER_COORDINATES:
                 DialogBox(hInst, MAKEINTRESOURCE(IDD_ENTER_COORDINATES), hWnd, EnterCoordinates);
                 break;
+            case IDM_MODE_ADD_VERTEX:
+                mouse_mode = MouseMode::AddVertex;
+                status_text = L"Режим: добавление вершины";
+                InvalidateRect(hWnd, nullptr, TRUE);
+                break;
+            case IDM_MODE_SELECT_START:
+                mouse_mode = MouseMode::SelectStart;
+                status_text = L"Режим: выбор начальной вершины";
+                InvalidateRect(hWnd, nullptr, TRUE);
+                break;
+            case IDM_MODE_SELECT_END:
+                mouse_mode = MouseMode::SelectEnd;
+                status_text = L"Режим: выбор конечной вершины";
+                InvalidateRect(hWnd, nullptr, TRUE);
+                break;
+            case IDM_BUILD_PATH:
+                RebuildPath();
+                status_text = L"Путь построен";
+                InvalidateRect(hWnd, nullptr, TRUE);
+                break;
+            case IDM_CLEAR_GRAPH:
+                coordinates.clear();
+                coordinates.resize(2);
+                RebuildGraph();
+                status_text = L"Граф очищен";
+                InvalidateRect(hWnd, nullptr, TRUE);
+                break;
             case IDM_EXIT:
                 DestroyWindow(hWnd);
                 break;
@@ -159,8 +226,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         break;
     case WM_SIZE:
     {
-        graph.FormMatrix();
-        graph.BuildTreeEdgesPrim();
+        RebuildPath();
         InvalidateRect(hWnd, nullptr, TRUE);
     }
     break;
@@ -273,27 +339,53 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         GetClientRect(hWnd, &client_rect);
         int clientHeight = client_rect.bottom - client_rect.top;
 
-        float scale = 30.0f;
-        int scale_int = static_cast<int>(scale);
-        float radius = 4 * (scale / 15);
+        int vertex = FindVertexByMouse(mouse_x, mouse_y, clientHeight);
 
-        auto vertices = graph.GetVertices();
-        for (size_t i = 0; i < vertices.size(); ++i) {
-            int x = vertices[i].x_ * scale_int + 10;
-            int y = -vertices[i].y_ * scale_int + clientHeight - 10;
-
-            float dist = std::sqrt(std::pow(mouse_x - x, 2) + std::pow(mouse_y - y, 2));
-            if (dist <= radius + 5) {
-                if (GetAsyncKeyState(VK_SHIFT) & 0x8000) {
-                    graph.SetEndVertex(i);
-                } else {
-                    graph.SetStartVertex(i);
-                }
-                graph.BuildTreeEdgesPrim();
+        if (mouse_mode == MouseMode::AddVertex) {
+            if (vertex != -1) {
+                status_text = L"Тут уже есть вершина";
                 InvalidateRect(hWnd, nullptr, TRUE);
                 break;
             }
+
+            float scale = 30.0f;
+            int graph_x = static_cast<int>((mouse_x - 10) / scale + 0.5f);
+            int graph_y = static_cast<int>((clientHeight - 10 - mouse_y) / scale + 0.5f);
+
+            if (graph_x < 0 || graph_y < 0) {
+                status_text = L"Вершина должна быть в положительной области координат";
+                InvalidateRect(hWnd, nullptr, TRUE);
+                break;
+            }
+
+            if (coordinates.size() < 2) {
+                coordinates.resize(2);
+            }
+            coordinates[0].push_back(graph_x);
+            coordinates[1].push_back(graph_y);
+            RebuildGraph();
+            status_text = L"Вершина добавлена";
+            InvalidateRect(hWnd, nullptr, TRUE);
+            break;
         }
+
+        if (vertex == -1) {
+            status_text = L"Кликните по существующей вершине";
+            InvalidateRect(hWnd, nullptr, TRUE);
+            break;
+        }
+
+        if (mouse_mode == MouseMode::SelectStart) {
+            graph.SetStartVertex(vertex);
+            status_text = L"Начальная вершина выбрана";
+        }
+        else if (mouse_mode == MouseMode::SelectEnd) {
+            graph.SetEndVertex(vertex);
+            status_text = L"Конечная вершина выбрана";
+        }
+
+        RebuildPath();
+        InvalidateRect(hWnd, nullptr, TRUE);
     }
     break;
     case WM_DESTROY:
@@ -374,9 +466,8 @@ INT_PTR CALLBACK EnterCoordinates(HWND hDlg, UINT message, WPARAM wParam, LPARAM
             std::vector<std::vector<int>> new_coords;
             if (ParseTwoColumnCoordinates(buf, new_coords)) {
                 coordinates = new_coords;
-                graph = Graph(coordinates);
-                graph.FormMatrix();
-                graph.BuildTreeEdgesPrim();
+                RebuildGraph();
+                status_text = L"Координаты обновлены";
 
                 HWND parent = GetParent(hDlg);
                 if (!parent) parent = GetWindow(hDlg, GW_OWNER);
