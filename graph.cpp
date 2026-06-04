@@ -241,41 +241,66 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             int clientWidth = client_rect.right - client_rect.left;
 
             HBRUSH brush_black = CreateSolidBrush(RGB(0, 0, 0));
+            HBRUSH brush_blue = CreateSolidBrush(RGB(21, 101, 192));
             HBRUSH brush_green = CreateSolidBrush(RGB(0, 255, 0));
             HBRUSH brush_red = CreateSolidBrush(RGB(255, 0, 0));
-            HPEN pen_gray = CreatePen(PS_SOLID, 1, RGB(200, 200, 200));
-            HPEN pen_old = (HPEN)SelectObject(hdc, pen_gray);
+            HPEN pen_grid = CreatePen(PS_SOLID, 1, RGB(235, 235, 235));
+            HPEN pen_axis = CreatePen(PS_SOLID, 1, RGB(160, 160, 160));
+            HPEN pen_tree = CreatePen(PS_SOLID, 1, RGB(150, 150, 150));
+            HPEN pen_path = CreatePen(PS_SOLID, 3, RGB(46, 125, 50));
+            HPEN pen_old = (HPEN)SelectObject(hdc, pen_grid);
             HBRUSH brush_old = (HBRUSH)SelectObject(hdc, brush_black);
 
             float scale{ 30 };
             int scale_int{ static_cast<int>(scale) };
-            float radius{ 4 * (scale / 15) };
+            int radius{ 12 };
 
-            // Draw axes
             int origin_x = 10;
             int origin_y = clientHeight - 10;
-            MoveToEx(hdc, origin_x, origin_y - 500, nullptr);
-            LineTo(hdc, origin_x, origin_y + 50);
-            MoveToEx(hdc, origin_x - 50, origin_y, nullptr);
+
+            for (int x = origin_x; x < clientWidth; x += scale_int) {
+                MoveToEx(hdc, x, 0, nullptr);
+                LineTo(hdc, x, origin_y);
+            }
+            for (int y = origin_y; y > 0; y -= scale_int) {
+                MoveToEx(hdc, origin_x, y, nullptr);
+                LineTo(hdc, clientWidth, y);
+            }
+
+            SelectObject(hdc, pen_axis);
+            MoveToEx(hdc, origin_x, 0, nullptr);
+            LineTo(hdc, origin_x, origin_y);
+            MoveToEx(hdc, origin_x, origin_y, nullptr);
             LineTo(hdc, clientWidth, origin_y);
 
-            // Draw axis labels (every 100 units in graph space)
-            for (int i = 0; i <= 30; i += 10) {
+            SetBkMode(hdc, TRANSPARENT);
+            SetTextColor(hdc, RGB(80, 80, 80));
+            TextOutW(hdc, clientWidth - 25, origin_y - 20, L"X", 1);
+            TextOutW(hdc, origin_x + 8, 8, L"Y", 1);
+
+            for (int i = 0; i <= 30; i += 5) {
+                std::wstring label = std::to_wstring(i);
                 int x = origin_x + i * scale_int;
+                int y = origin_y - i * scale_int;
+
                 MoveToEx(hdc, x, origin_y, nullptr);
                 LineTo(hdc, x, origin_y + 5);
-            }
-            for (int i = 0; i <= 30; i += 10) {
-                int y = origin_y - i * scale_int;
+                TextOutW(hdc, x - 8, origin_y - 18, label.c_str(),
+                    static_cast<int>(label.size()));
+
                 MoveToEx(hdc, origin_x, y, nullptr);
-                LineTo(hdc, origin_x - 5, y);
+                LineTo(hdc, origin_x + 5, y);
+                TextOutW(hdc, origin_x + 8, y - 8, label.c_str(),
+                    static_cast<int>(label.size()));
             }
 
             auto tree_edges{ graph.GetTree() };
+            auto path_edges{ graph.GetPath() };
             int start_v = graph.GetStartVertex();
             int end_v = graph.GetEndVertex();
             auto vertices = graph.GetVertices();
 
+            SelectObject(hdc, pen_tree);
             for (const auto& edge : tree_edges) {
                 int x1 = edge.first_.x_ * scale_int + 10;
                 int y1 = -edge.first_.y_ * scale_int + clientHeight - 10;
@@ -283,50 +308,70 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                 int y2 = -edge.second_.y_ * scale_int + clientHeight - 10;
 
                 MoveToEx(hdc, x1, y1, nullptr);
-                SelectObject(hdc, brush_black);
-                Ellipse(hdc, x1 - radius,
-                    y1 - radius,
-                    x1 + radius,
-                    y1 + radius);
-                SelectObject(hdc, brush_old);
                 LineTo(hdc, x2, y2);
-                SelectObject(hdc, brush_black);
-                Ellipse(hdc, x2 - radius, y2 - radius, x2 + radius, y2 + radius);
-                SelectObject(hdc, brush_old);
             }
 
-            // Draw all vertices with start/end highlighting
+            SelectObject(hdc, pen_path);
+            for (const auto& edge : path_edges) {
+                int x1 = edge.first_.x_ * scale_int + 10;
+                int y1 = -edge.first_.y_ * scale_int + clientHeight - 10;
+                int x2 = edge.second_.x_ * scale_int + 10;
+                int y2 = -edge.second_.y_ * scale_int + clientHeight - 10;
+
+                MoveToEx(hdc, x1, y1, nullptr);
+                LineTo(hdc, x2, y2);
+            }
+
             for (size_t i = 0; i < vertices.size(); ++i) {
                 int x = vertices[i].x_ * scale_int + 10;
                 int y = -vertices[i].y_ * scale_int + clientHeight - 10;
 
                 if ((int)i == start_v) {
                     SelectObject(hdc, brush_green);
-                    Ellipse(hdc, x - radius - 2, y - radius - 2,
-                           x + radius + 2, y + radius + 2);
-                } else if ((int)i == end_v) {
+                }
+                else if ((int)i == end_v) {
                     SelectObject(hdc, brush_red);
-                    Ellipse(hdc, x - radius - 2, y - radius - 2,
-                           x + radius + 2, y + radius + 2);
+                }
+                else {
+                    SelectObject(hdc, brush_blue);
+                }
+
+                Ellipse(hdc, x - radius, y - radius, x + radius, y + radius);
+
+                std::wstring number = std::to_wstring(i);
+                SetTextColor(hdc, RGB(255, 255, 255));
+                TextOutW(hdc, x - 5, y - 8, number.c_str(),
+                    static_cast<int>(number.size()));
+
+                SetTextColor(hdc, RGB(0, 120, 0));
+                if ((int)i == start_v) {
+                    TextOutW(hdc, x - 20, y - radius - 18, L"START", 5);
+                }
+                SetTextColor(hdc, RGB(180, 0, 0));
+                if ((int)i == end_v) {
+                    TextOutW(hdc, x - 14, y - radius - 18, L"END", 3);
                 }
             }
 
-            if (!tree_edges.empty()) {
-                size_t tree_size = tree_edges.size() - 1;
-                int x = tree_edges[tree_size].second_.x_ * scale_int + 10;
-                int y =
-                    -tree_edges[tree_size].second_.y_ * scale_int + clientHeight - 10;
+            std::wstringstream status;
+            status << status_text << L" | Старт: " << start_v
+                << L" | Конец: " << end_v
+                << L" | Длина пути: " << graph.GetPathLength();
+            std::wstring status_line = status.str();
+            SetTextColor(hdc, RGB(0, 0, 0));
+            TextOutW(hdc, 10, 10, status_line.c_str(),
+                static_cast<int>(status_line.size()));
 
-                SelectObject(hdc, brush_black);
-                Ellipse(hdc, x - radius, y - radius,
-                    x + radius,
-                    y + radius);
-            }
-
+            SelectObject(hdc, pen_old);
+            SelectObject(hdc, brush_old);
             DeleteObject(brush_black);
+            DeleteObject(brush_blue);
             DeleteObject(brush_green);
             DeleteObject(brush_red);
-            DeleteObject(pen_gray);
+            DeleteObject(pen_grid);
+            DeleteObject(pen_axis);
+            DeleteObject(pen_tree);
+            DeleteObject(pen_path);
             EndPaint(hWnd, &ps);
         }
         break;
