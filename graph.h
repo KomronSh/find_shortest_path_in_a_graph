@@ -1,7 +1,9 @@
 ﻿#pragma once
 #include "Resource.h"
+#include <algorithm>
 #include <cmath>
 #include <iostream>
+#include <limits>
 #include <vector>
 
 struct Vertex {
@@ -56,8 +58,16 @@ public:
         }
     }
     void BuildTreeEdgesPrim() {
+        tree_.clear();
+        path_.clear();
+        path_length_ = 0;
+        for (auto& vertex : vertex_array_) {
+            vertex.neighbors_.clear();
+        }
+
         size_t matrix_size = distance_matrix_.size();
         if (matrix_size < 2) return;
+        if (start_vertex_ < 0 || start_vertex_ >= static_cast<int>(matrix_size)) return;
 
         std::vector<bool> tree_has(matrix_size, false);
         tree_has[start_vertex_] = true;  // Start from selected vertex
@@ -99,6 +109,44 @@ public:
                 break;
             }
         }
+
+        BuildPathFromTree();
+    }
+    void BuildPathFromTree() {
+        path_.clear();
+        path_length_ = 0;
+
+        size_t size = vertex_array_.size();
+        if (size < 2) return;
+        if (start_vertex_ < 0 || end_vertex_ < 0) return;
+        if (start_vertex_ >= static_cast<int>(size) ||
+            end_vertex_ >= static_cast<int>(size)) {
+            return;
+        }
+        if (start_vertex_ == end_vertex_) return;
+
+        std::vector<bool> visited(size, false);
+        std::vector<int> parent(size, -1);
+        FindPathDfs(start_vertex_, visited, parent);
+
+        if (parent[end_vertex_] == -1) return;
+
+        std::vector<int> vertex_path;
+        int current = end_vertex_;
+        while (current != -1) {
+            vertex_path.push_back(current);
+            if (current == start_vertex_) break;
+            current = parent[current];
+        }
+        std::reverse(vertex_path.begin(), vertex_path.end());
+
+        for (size_t i = 0; i + 1 < vertex_path.size(); ++i) {
+            int first = vertex_path[i];
+            int second = vertex_path[i + 1];
+            float length = distance_matrix_[first][second];
+            path_.push_back({ vertex_array_[first], vertex_array_[second], length });
+            path_length_ += length;
+        }
     }
     void PrintVertices() {
         for (size_t i{ 0 }; i < vertex_array_.size(); ++i) {
@@ -118,11 +166,21 @@ public:
         }
     }
     std::vector<Edge> GetTree() const { return tree_; }
+    std::vector<Edge> GetPath() const { return path_; }
     std::vector<Vertex> GetVertices() const { return vertex_array_; }
     size_t GetVertexCount() const { return vertex_array_.size(); }
+    float GetPathLength() const { return path_length_; }
 
-    void SetStartVertex(int v) { start_vertex_ = v; }
-    void SetEndVertex(int v) { end_vertex_ = v; }
+    void SetStartVertex(int v) {
+        if (v >= 0 && v < static_cast<int>(vertex_array_.size())) {
+            start_vertex_ = v;
+        }
+    }
+    void SetEndVertex(int v) {
+        if (v >= 0 && v < static_cast<int>(vertex_array_.size())) {
+            end_vertex_ = v;
+        }
+    }
     int GetStartVertex() const { return start_vertex_; }
     int GetEndVertex() const { return end_vertex_; }
 
@@ -130,7 +188,28 @@ private:
     std::vector<Vertex> vertex_array_;
     std::vector<std::vector<float>> distance_matrix_;
     std::vector<Edge> tree_;
+    std::vector<Edge> path_;
     int max_neighbors_{ 4 };
     int start_vertex_;
     int end_vertex_;
+    float path_length_{ 0 };
+
+    bool FindPathDfs(int current, std::vector<bool>& visited,
+        std::vector<int>& parent) {
+        visited[current] = true;
+        if (current == end_vertex_) {
+            return true;
+        }
+
+        for (int next : vertex_array_[current].neighbors_) {
+            if (!visited[next]) {
+                parent[next] = current;
+                if (FindPathDfs(next, visited, parent)) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
 };
