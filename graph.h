@@ -31,6 +31,8 @@ public:
             std::vector<float>(size, 0));
 
         distance_matrix_ = my_2d_vector;
+        start_vertex_ = 0;
+        end_vertex_ = size > 0 ? size - 1 : 0;
     }
     void FormMatrix() {
         int i{ -1 };
@@ -58,7 +60,7 @@ public:
         if (matrix_size < 2) return;
 
         std::vector<bool> tree_has(matrix_size, false);
-        tree_has[0] = true;
+        tree_has[start_vertex_] = true;  // Start from selected vertex
         size_t edges_added = 0;
 
         while (edges_added < matrix_size - 1) {
@@ -67,15 +69,12 @@ public:
             int best_j = -1;
 
             for (size_t i{ 0 }; i < matrix_size; ++i) {
-                // Only consider i if it's in the tree AND hasn't hit its neighbor limit
                 if (!tree_has[i] ||
                     vertex_array_[i].neighbors_.size() >= max_neighbors_) {
                     continue;
                 }
 
                 for (size_t j{ 0 }; j < matrix_size; ++j) {
-                    // v must be outside the tree, have space for a neighbor, and have a
-                    // valid distance
                     if (!tree_has[j] &&
                         vertex_array_[j].neighbors_.size() < max_neighbors_ &&
                         distance_matrix_[i][j] > 0) {
@@ -97,7 +96,6 @@ public:
                 ++edges_added;
             }
             else {
-                // Either disconnected or no valid edges left that satisfy max_neighbors
                 break;
             }
         }
@@ -120,10 +118,19 @@ public:
         }
     }
     std::vector<Edge> GetTree() const { return tree_; }
+    std::vector<Vertex> GetVertices() const { return vertex_array_; }
+    size_t GetVertexCount() const { return vertex_array_.size(); }
+
+    void SetStartVertex(int v) { start_vertex_ = v; }
+    void SetEndVertex(int v) { end_vertex_ = v; }
+    int GetStartVertex() const { return start_vertex_; }
+    int GetEndVertex() const { return end_vertex_; }
 
 private:
     std::vector<Vertex> vertex_array_;
     std::vector<std::vector<float>> distance_matrix_;
     std::vector<Edge> tree_;
     int max_neighbors_{ 4 };
+    int start_vertex_;
+    int end_vertex_;
 };

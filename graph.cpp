@@ -119,8 +119,6 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
    ShowWindow(hWnd, nCmdShow);
    UpdateWindow(hWnd);
 
-   // Build vertex and tree data once at initialization. Rebuild will
-   // also occur on WM_SIZE so we don't need to recreate them every paint.
    graph.FormMatrix();
    graph.BuildTreeEdgesPrim();
 
@@ -173,15 +171,43 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             RECT client_rect;
             GetClientRect(hWnd, &client_rect);
             int clientHeight = client_rect.bottom - client_rect.top;
+            int clientWidth = client_rect.right - client_rect.left;
 
             HBRUSH brush_black = CreateSolidBrush(RGB(0, 0, 0));
+            HBRUSH brush_green = CreateSolidBrush(RGB(0, 255, 0));
+            HBRUSH brush_red = CreateSolidBrush(RGB(255, 0, 0));
+            HPEN pen_gray = CreatePen(PS_SOLID, 1, RGB(200, 200, 200));
+            HPEN pen_old = (HPEN)SelectObject(hdc, pen_gray);
             HBRUSH brush_old = (HBRUSH)SelectObject(hdc, brush_black);
 
             float scale{ 30 };
             int scale_int{ static_cast<int>(scale) };
             float radius{ 4 * (scale / 15) };
 
+            // Draw axes
+            int origin_x = 10;
+            int origin_y = clientHeight - 10;
+            MoveToEx(hdc, origin_x, origin_y - 500, nullptr);
+            LineTo(hdc, origin_x, origin_y + 50);
+            MoveToEx(hdc, origin_x - 50, origin_y, nullptr);
+            LineTo(hdc, clientWidth, origin_y);
+
+            // Draw axis labels (every 100 units in graph space)
+            for (int i = 0; i <= 30; i += 10) {
+                int x = origin_x + i * scale_int;
+                MoveToEx(hdc, x, origin_y, nullptr);
+                LineTo(hdc, x, origin_y + 5);
+            }
+            for (int i = 0; i <= 30; i += 10) {
+                int y = origin_y - i * scale_int;
+                MoveToEx(hdc, origin_x, y, nullptr);
+                LineTo(hdc, origin_x - 5, y);
+            }
+
             auto tree_edges{ graph.GetTree() };
+            int start_v = graph.GetStartVertex();
+            int end_v = graph.GetEndVertex();
+            auto vertices = graph.GetVertices();
 
             for (const auto& edge : tree_edges) {
                 int x1 = edge.first_.x_ * scale_int + 10;
@@ -202,6 +228,22 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                 SelectObject(hdc, brush_old);
             }
 
+            // Draw all vertices with start/end highlighting
+            for (size_t i = 0; i < vertices.size(); ++i) {
+                int x = vertices[i].x_ * scale_int + 10;
+                int y = -vertices[i].y_ * scale_int + clientHeight - 10;
+
+                if ((int)i == start_v) {
+                    SelectObject(hdc, brush_green);
+                    Ellipse(hdc, x - radius - 2, y - radius - 2,
+                           x + radius + 2, y + radius + 2);
+                } else if ((int)i == end_v) {
+                    SelectObject(hdc, brush_red);
+                    Ellipse(hdc, x - radius - 2, y - radius - 2,
+                           x + radius + 2, y + radius + 2);
+                }
+            }
+
             if (!tree_edges.empty()) {
                 size_t tree_size = tree_edges.size() - 1;
                 int x = tree_edges[tree_size].second_.x_ * scale_int + 10;
@@ -209,13 +251,15 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                     -tree_edges[tree_size].second_.y_ * scale_int + clientHeight - 10;
 
                 SelectObject(hdc, brush_black);
-                Ellipse(hdc, x - radius,
-                    y - radius,
+                Ellipse(hdc, x - radius, y - radius,
                     x + radius,
                     y + radius);
             }
 
             DeleteObject(brush_black);
+            DeleteObject(brush_green);
+            DeleteObject(brush_red);
+            DeleteObject(pen_gray);
             EndPaint(hWnd, &ps);
         }
         break;
